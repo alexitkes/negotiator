@@ -1,0 +1,16 @@
+{% extends 'base.html' %}
+
+{% block title %}Домашняя страница{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-8">
+        <div class="card shadow-sm">
+            <div class="card-body text-center">
+                <h1 class="h3 mb-3">Добро пожаловать, {{ user.username }}!</h1>
+                <p class="text-muted mb-0">Вы вошли в систему. Это ваша домашняя страница.</p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
