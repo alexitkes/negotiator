@@ -68,7 +68,8 @@ def generate_order_response(order_text, skills, customer_url=''):
                 {'role': 'user', 'content': build_user_prompt(order_text, skills, customer_url)},
             ],
             response_format={'type': 'json_object'},
-            temperature=0.7,
+            temperature=settings.OPENAI_TEMPERATURE,
+            max_tokens=settings.OPENAI_MAX_TOKENS,
         )
     except Exception as exc:  # noqa: BLE001 — сеть/API могут вернуть любую ошибку
         raise LLMError(f'Не удалось получить ответ от LLM: {exc}') from exc
