@@ -13,6 +13,7 @@
 
                 <form method="post" action="{{ form_action }}" id="order-form" novalidate>
                     {% csrf_token %}
+                    <input type="hidden" name="llm_call_id" id="llm-call-id" value="">
 
                     <div class="mb-3">
                         <label for="{{ form.url.id_for_label }}" class="form-label">{{ form.url.label }}</label>
@@ -44,7 +45,8 @@
                     <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
                         <h2 class="h6 mb-0">Отклик и оценки</h2>
                         <button type="button" class="btn btn-outline-primary btn-sm" id="generate-btn"
-                                data-url="{% url 'order_generate_response' %}">
+                                data-url="{% url 'order_generate_response' %}"
+                                data-order-id="{% if order %}{{ order.pk }}{% endif %}">
                             <span class="spinner-border spinner-border-sm me-1 d-none" id="generate-spinner"
                                   role="status" aria-hidden="true"></span>
                             Сгенерировать с помощью LLM
@@ -108,6 +110,8 @@
         const button = document.getElementById('generate-btn');
         const spinner = document.getElementById('generate-spinner');
         const alertBox = document.getElementById('llm-alert');
+        const callIdField = document.getElementById('llm-call-id');
+        const orderId = button.dataset.orderId ? Number(button.dataset.orderId) : null;
         const textField = document.getElementById('{{ form.text.id_for_label }}');
         const customerField = document.getElementById('{{ form.customer_url.id_for_label }}');
         const scoreField = document.getElementById('{{ form.prospects_score.id_for_label }}');
@@ -150,6 +154,7 @@
                     body: JSON.stringify({
                         text: textField.value,
                         customer_url: customerField.value,
+                        order_id: orderId,
                     }),
                 });
 
@@ -164,6 +169,7 @@
                 timeField.value = data.estimated_time || '';
                 costField.value = data.estimated_cost || '';
                 responseField.value = data.response_text || '';
+                callIdField.value = data.llm_call_id || '';
 
                 showAlert('success', 'Отклик сгенерирован. Проверьте текст и сохраните заказ.');
             } catch (error) {

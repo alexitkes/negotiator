@@ -46,8 +46,7 @@ def build_user_prompt(order_text, skills, customer_url=''):
 def generate_order_response(order_text, skills, customer_url=''):
     """Запрашивает у LLM оценки и текст отклика по заказу.
 
-    Возвращает словарь с ключами prospects_score, estimated_time,
-    estimated_cost и response_text.
+    Возвращает словарь с результатами генерации, названием модели и расходом токенов.
     """
     if not settings.OPENAI_API_KEY:
         raise LLMError('Не задан токен доступа к LLM. Укажите OPENAI_API_KEY в файле .env.')
@@ -95,9 +94,20 @@ def generate_order_response(order_text, skills, customer_url=''):
     if not response_text:
         raise LLMError('LLM не вернула текст отклика. Попробуйте ещё раз.')
 
+    usage = getattr(completion, 'usage', None)
+    prompt_tokens = getattr(usage, 'prompt_tokens', 0) or 0
+    completion_tokens = getattr(usage, 'completion_tokens', 0) or 0
+    total_tokens = getattr(usage, 'total_tokens', None)
+    if total_tokens is None:
+        total_tokens = prompt_tokens + completion_tokens
+
     return {
         'prospects_score': score,
         'estimated_time': str(data.get('estimated_time') or '').strip()[:255],
         'estimated_cost': str(data.get('estimated_cost') or '').strip()[:255],
         'response_text': response_text,
+        'model_name': getattr(completion, 'model', '') or settings.OPENAI_MODEL,
+        'prompt_tokens': prompt_tokens,
+        'completion_tokens': completion_tokens,
+        'total_tokens': total_tokens,
     }

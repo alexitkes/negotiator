@@ -72,3 +72,39 @@ class Order(models.Model):
 
     def __str__(self):
         return self.url
+
+
+class LLMCall(models.Model):
+    """Информация об обращении к LLM и расходе токенов.
+
+    Запись сохраняется независимо от судьбы заказа: при удалении заказа
+    ссылка на него обнуляется, а привязка к пользователю остаётся.
+    """
+
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name='llm_calls',
+        verbose_name='Пользователь',
+    )
+    order = models.ForeignKey(
+        Order,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='llm_calls',
+        verbose_name='Заказ',
+    )
+    model_name = models.CharField('Модель', max_length=255)
+    prompt_tokens = models.PositiveIntegerField('Токенов в запросе', default=0)
+    completion_tokens = models.PositiveIntegerField('Токенов в ответе', default=0)
+    total_tokens = models.PositiveIntegerField('Всего токенов', default=0)
+    created_at = models.DateTimeField('Метка времени', auto_now_add=True)
+
+    class Meta:
+        verbose_name = 'Обращение к LLM'
+        verbose_name_plural = 'Обращения к LLM'
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f'{self.model_name} — {self.total_tokens} токенов ({self.created_at:%d.%m.%Y %H:%M})'

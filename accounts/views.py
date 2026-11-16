@@ -9,8 +9,22 @@ from django.urls import reverse
 from django.views.decorators.http import require_POST
 
 from .forms import OrderForm, ProfileForm
-from .models import Order, Profile
+from .models import LLMCall, Order, Profile
 from .services import LLMError, generate_order_response
+
+
+def _link_llm_call(request, order):
+    """Привязывает сохранённый заказ к обращению к LLM, если форма его передала."""
+    call_id = request.POST.get('llm_call_id')
+    if not call_id or not str(call_id).isdigit():
+        return
+
+    call = LLMCall.objects.filter(pk=call_id, user=request.user).first()
+    if call is None or call.order_id is not None:
+        return
+
+    call.order = order
+    call.save(update_fields=['order'])
 
 
 @login_required
@@ -46,6 +60,7 @@ def order_create(request):
             order = form.save(commit=False)
             order.user = request.user
             order.save()
+            _link_llm_call(request, order)
             messages.success(request, 'Заказ добавлен.')
             return redirect('order_list')
     else:
@@ -67,6 +82,7 @@ def order_edit(request, pk):
         form = OrderForm(request.POST, instance=order)
         if form.is_valid():
             form.save()
+            _link_llm_call(request, order)
             messages.success(request, 'Заказ обновлён.')
             return redirect('order_list')
     else:
@@ -100,6 +116,14 @@ def order_generate_response(request):
             status=400,
         )
 
+    order = None
+    order_id = payload.get('order_id')
+    if order_id not in (None, ''):
+        try:
+            order = Order.objects.filter(pk=int(order_id), user=request.user).first()
+        except (TypeError, ValueError):
+            order = None
+
     profile, _ = Profile.objects.get_or_create(user=request.user)
     skills = (profile.about or '').strip()
     if not skills:
@@ -116,7 +140,24 @@ def order_generate_response(request):
     except LLMError as exc:
         return JsonResponse({'error': str(exc)}, status=502)
 
-    return JsonResponse(result)
+    call = LLMCall.objects.create(
+        user=request.user,
+        order=order,
+        model_name=result['model_name'],
+        prompt_tokens=result['prompt_tokens'],
+        completion_tokens=result['completion_tokens'],
+        total_tokens=result['total_tokens'],
+    )
+
+    return JsonResponse(
+        {
+            'prospects_score': result['prospects_score'],
+            'estimated_time': result['estimated_time'],
+            'estimated_cost': result['estimated_cost'],
+            'response_text': result['response_text'],
+            'llm_call_id': call.pk,
+        }
+    )
 
 
 @login_required
