@@ -8,7 +8,8 @@
         <div class="card shadow-sm mb-4">
             <div class="card-body text-center">
                 <h1 class="h3 mb-3">Добро пожаловать, {{ user.username }}!</h1>
-                <p class="text-muted mb-0">Вы вошли в систему. Это ваша домашняя страница.</p>
+                <p class="text-muted mb-3">Вы вошли в систему. Это ваша домашняя страница.</p>
+                <a href="{% url 'order_list' %}" class="btn btn-primary">Мои заказы</a>
             </div>
         </div>
 

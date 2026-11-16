@@ -1,0 +1,67 @@
+{% extends 'base.html' %}
+
+{% block title %}Мои заказы{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-lg-9">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <h1 class="h3 mb-0">Мои заказы</h1>
+            <a href="{% url 'order_create' %}" class="btn btn-primary">Добавить заказ</a>
+        </div>
+
+        {% if orders %}
+            {% for order in orders %}
+                <div class="card shadow-sm mb-3">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-start mb-2">
+                            <a href="{{ order.url }}" target="_blank" rel="noopener noreferrer"
+                               class="text-break me-3">{{ order.url }}</a>
+                            <small class="text-muted text-nowrap">{{ order.created_at|date:"d.m.Y H:i" }}</small>
+                        </div>
+                        <p class="mb-2" style="white-space: pre-line;">{{ order.text }}</p>
+                        {% if order.customer_url %}
+                            <p class="mb-3 small text-break">
+                                <span class="text-muted">Профиль заказчика:</span>
+                                <a href="{{ order.customer_url }}" target="_blank" rel="noopener noreferrer">{{ order.customer_url }}</a>
+                            </p>
+                        {% endif %}
+
+                        {% if order.prospects_score is not None or order.estimated_time or order.estimated_cost %}
+                            <div class="d-flex flex-wrap gap-2 mb-3">
+                                {% if order.prospects_score is not None %}
+                                    <span class="badge text-bg-primary">Перспективы: {{ order.prospects_score }}/100</span>
+                                {% endif %}
+                                {% if order.estimated_time %}
+                                    <span class="badge text-bg-secondary">Срок: {{ order.estimated_time }}</span>
+                                {% endif %}
+                                {% if order.estimated_cost %}
+                                    <span class="badge text-bg-secondary">Стоимость: {{ order.estimated_cost }}</span>
+                                {% endif %}
+                            </div>
+                        {% endif %}
+
+                        {% if order.response_text %}
+                            <div class="border rounded bg-light p-3 mb-3">
+                                <div class="text-muted small mb-1">Отклик</div>
+                                <div style="white-space: pre-line;">{{ order.response_text }}</div>
+                            </div>
+                        {% endif %}
+
+                        <div class="d-flex gap-2">
+                            <a href="{% url 'order_edit' order.pk %}" class="btn btn-outline-secondary btn-sm">Редактировать</a>
+                            <form method="post" action="{% url 'order_delete' order.pk %}"
+                                  onsubmit="return confirm('Удалить этот заказ?');">
+                                {% csrf_token %}
+                                <button type="submit" class="btn btn-outline-danger btn-sm">Удалить</button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            {% endfor %}
+        {% else %}
+            <div class="alert alert-info">У вас пока нет добавленных заказов.</div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

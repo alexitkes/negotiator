@@ -11,4 +11,9 @@ urlpatterns = [
         name='login',
     ),
     path('logout/', views.logout_view, name='logout'),
+    path('orders/', views.order_list, name='order_list'),
+    path('orders/add/', views.order_create, name='order_create'),
+    path('orders/generate-response/', views.order_generate_response, name='order_generate_response'),
+    path('orders/<int:pk>/edit/', views.order_edit, name='order_edit'),
+    path('orders/<int:pk>/delete/', views.order_delete, name='order_delete'),
 ]

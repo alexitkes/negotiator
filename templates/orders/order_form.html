@@ -1,0 +1,177 @@
+{% extends 'base.html' %}
+
+{% block title %}{% if order %}Редактирование заказа{% else %}Добавление заказа{% endif %}{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-lg-8">
+        <div class="card shadow-sm">
+            <div class="card-body">
+                <h1 class="h4 card-title mb-4">
+                    {% if order %}Редактирование заказа{% else %}Добавление заказа{% endif %}
+                </h1>
+
+                <form method="post" action="{{ form_action }}" id="order-form" novalidate>
+                    {% csrf_token %}
+
+                    <div class="mb-3">
+                        <label for="{{ form.url.id_for_label }}" class="form-label">{{ form.url.label }}</label>
+                        {{ form.url }}
+                        {% if form.url.errors %}
+                            <div class="invalid-feedback d-block">{{ form.url.errors|join:" " }}</div>
+                        {% endif %}
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="{{ form.text.id_for_label }}" class="form-label">{{ form.text.label }}</label>
+                        {{ form.text }}
+                        {% if form.text.errors %}
+                            <div class="invalid-feedback d-block">{{ form.text.errors|join:" " }}</div>
+                        {% endif %}
+                    </div>
+
+                    <div class="mb-4">
+                        <label for="{{ form.customer_url.id_for_label }}" class="form-label">{{ form.customer_url.label }}</label>
+                        {{ form.customer_url }}
+                        {% if form.customer_url.errors %}
+                            <div class="invalid-feedback d-block">{{ form.customer_url.errors|join:" " }}</div>
+                        {% endif %}
+                        <div class="form-text">Поле необязательное. Укажите ссылку на профиль заказчика, если она известна.</div>
+                    </div>
+
+                    <hr class="my-4">
+
+                    <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+                        <h2 class="h6 mb-0">Отклик и оценки</h2>
+                        <button type="button" class="btn btn-outline-primary btn-sm" id="generate-btn"
+                                data-url="{% url 'order_generate_response' %}">
+                            <span class="spinner-border spinner-border-sm me-1 d-none" id="generate-spinner"
+                                  role="status" aria-hidden="true"></span>
+                            Сгенерировать с помощью LLM
+                        </button>
+                    </div>
+
+                    <div id="llm-alert" class="d-none" role="alert"></div>
+
+                    <p class="text-muted small">
+                        Заполните поля вручную или нажмите кнопку генерации — оценки и текст отклика подставятся
+                        автоматически. В качестве описания навыков используется текст «О себе» с домашней страницы.
+                    </p>
+
+                    <div class="mb-3">
+                        <label for="{{ form.prospects_score.id_for_label }}" class="form-label">{{ form.prospects_score.label }}</label>
+                        {{ form.prospects_score }}
+                        {% if form.prospects_score.errors %}
+                            <div class="invalid-feedback d-block">{{ form.prospects_score.errors|join:" " }}</div>
+                        {% endif %}
+                        <div class="form-text">{{ form.prospects_score.help_text }}</div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="{{ form.estimated_time.id_for_label }}" class="form-label">{{ form.estimated_time.label }}</label>
+                            {{ form.estimated_time }}
+                            {% if form.estimated_time.errors %}
+                                <div class="invalid-feedback d-block">{{ form.estimated_time.errors|join:" " }}</div>
+                            {% endif %}
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="{{ form.estimated_cost.id_for_label }}" class="form-label">{{ form.estimated_cost.label }}</label>
+                            {{ form.estimated_cost }}
+                            {% if form.estimated_cost.errors %}
+                                <div class="invalid-feedback d-block">{{ form.estimated_cost.errors|join:" " }}</div>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <div class="mb-4">
+                        <label for="{{ form.response_text.id_for_label }}" class="form-label">{{ form.response_text.label }}</label>
+                        {{ form.response_text }}
+                        {% if form.response_text.errors %}
+                            <div class="invalid-feedback d-block">{{ form.response_text.errors|join:" " }}</div>
+                        {% endif %}
+                    </div>
+
+                    <div class="d-flex gap-2">
+                        <button type="submit" class="btn btn-primary">Сохранить</button>
+                        <a href="{% url 'order_list' %}" class="btn btn-outline-secondary">Отмена</a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    (function () {
+        const form = document.getElementById('order-form');
+        const button = document.getElementById('generate-btn');
+        const spinner = document.getElementById('generate-spinner');
+        const alertBox = document.getElementById('llm-alert');
+        const textField = document.getElementById('{{ form.text.id_for_label }}');
+        const customerField = document.getElementById('{{ form.customer_url.id_for_label }}');
+        const scoreField = document.getElementById('{{ form.prospects_score.id_for_label }}');
+        const timeField = document.getElementById('{{ form.estimated_time.id_for_label }}');
+        const costField = document.getElementById('{{ form.estimated_cost.id_for_label }}');
+        const responseField = document.getElementById('{{ form.response_text.id_for_label }}');
+
+        function showAlert(kind, message) {
+            alertBox.className = 'alert alert-' + kind;
+            alertBox.textContent = message;
+        }
+
+        function hideAlert() {
+            alertBox.className = 'd-none';
+            alertBox.textContent = '';
+        }
+
+        function setLoading(isLoading) {
+            button.disabled = isLoading;
+            spinner.classList.toggle('d-none', !isLoading);
+        }
+
+        button.addEventListener('click', async function () {
+            if (!textField.value.trim()) {
+                showAlert('warning', 'Введите текст заказа, чтобы сгенерировать отклик.');
+                textField.focus();
+                return;
+            }
+
+            setLoading(true);
+            hideAlert();
+
+            try {
+                const response = await fetch(button.dataset.url, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': form.querySelector('[name=csrfmiddlewaretoken]').value,
+                    },
+                    body: JSON.stringify({
+                        text: textField.value,
+                        customer_url: customerField.value,
+                    }),
+                });
+
+                const data = await response.json();
+                if (!response.ok) {
+                    throw new Error(data.error || 'Не удалось сгенерировать отклик.');
+                }
+
+                if (data.prospects_score !== null && data.prospects_score !== undefined) {
+                    scoreField.value = data.prospects_score;
+                }
+                timeField.value = data.estimated_time || '';
+                costField.value = data.estimated_cost || '';
+                responseField.value = data.response_text || '';
+
+                showAlert('success', 'Отклик сгенерирован. Проверьте текст и сохраните заказ.');
+            } catch (error) {
+                showAlert('danger', error.message);
+            } finally {
+                setLoading(false);
+            }
+        });
+    })();
+</script>
+{% endblock %}

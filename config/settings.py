@@ -10,10 +10,16 @@ For the full list of settings and their values, see
 https://docs.djangoproject.com/en/6.1/ref/settings/
 """
 
+import os
 from pathlib import Path
+
+from dotenv import load_dotenv
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
+
+# Загружаем переменные окружения из .env
+load_dotenv(BASE_DIR / '.env')
 
 
 # Quick-start development settings - unsuitable for production
@@ -131,3 +137,10 @@ MAILERS = {
         'BACKEND': 'django.core.mail.backends.console.EmailBackend',
     },
 }
+
+
+# OpenAI-совместимый API для генерации откликов
+OPENAI_API_KEY = os.getenv('OPENAI_API_KEY', '')
+OPENAI_BASE_URL = os.getenv('OPENAI_BASE_URL', 'https://api.openai.com/v1')
+OPENAI_MODEL = os.getenv('OPENAI_MODEL', '')
+OPENAI_TIMEOUT = float(os.getenv('OPENAI_TIMEOUT', '60'))

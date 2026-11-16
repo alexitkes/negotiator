@@ -15,7 +15,15 @@
     <div class="container">
         <a class="navbar-brand" href="{% url 'home' %}">Negotiator</a>
         {% if user.is_authenticated %}
-            <div class="ms-auto d-flex align-items-center">
+            <ul class="navbar-nav me-auto">
+                <li class="nav-item">
+                    <a class="nav-link" href="{% url 'home' %}">Главная</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="{% url 'order_list' %}">Мои заказы</a>
+                </li>
+            </ul>
+            <div class="d-flex align-items-center">
                 <span class="navbar-text me-3">{{ user.username }}</span>
                 <form method="post" action="{% url 'logout' %}" class="mb-0">
                     {% csrf_token %}
